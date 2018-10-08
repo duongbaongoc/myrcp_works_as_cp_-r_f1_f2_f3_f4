@@ -3,7 +3,7 @@
  * DIR files
  */
 
-/* cp f1 f2
+/* cp f1 f2 analysis
  * 		if f1 does not exist -> error
  * case 1: file1 to file2
  *		if file2 does not exist -> creat file2, do the copy
@@ -40,8 +40,8 @@ void execute_cp(int argc, char *argv[]);
 void validate_files(char *f1, char *f2);
 void cp_1on1(char *f1, char *f2);
 void cp_f2f(char *f1, char *f2);
-void cp_f2d(char *f1, char *f2);
-void cp_d2d(char *f1, char *f2);
+void cp_f2d(char *f1, char *d1);
+void cp_d2d(char *d1, char *d2);
 
 
 int main(int argc, char *argv[])
@@ -79,8 +79,7 @@ void validate_files(char *f1, char *f2)
 		exit(1);
 	}
 	else if (S_ISREG(f1stat.st_mode) < 0 &&
-			 S_ISDIR(f1stat.st_mode) < 0 &&
-			 S_ISLNK(f1stat.st_mode) < 0)
+			 S_ISDIR(f1stat.st_mode) < 0)
 	{
 		printf("cp: '%s' is a special file: Cannot copy special files\n", f1);
 		exit(1);
@@ -89,8 +88,7 @@ void validate_files(char *f1, char *f2)
 	//validate f2
 	if (stat(f2, &f2stat) == 0 &&
 		S_ISREG(f1stat.st_mode) < 0 &&
-		S_ISDIR(f1stat.st_mode) < 0 &&
-	    S_ISLNK(f1stat.st_mode) < 0)
+		S_ISDIR(f1stat.st_mode) < 0)
 	{
 		printf("cp: '%s' is a special file: Cannot copy to special files\n", f2);
 		exit(1);
@@ -104,7 +102,9 @@ void cp_1on1(char *f1, char *f2)
 	validate_files(f1, f2);
 	struct stat f1stat, f2stat;
 	stat(f1, &f1stat);
-	
+	printf("%d\n",S_ISREG(f1stat.st_mode));//test
+	printf("%d\n",S_ISLNK(f1stat.st_mode));//test
+	printf("%d\n",S_ISDIR(f1stat.st_mode));//test
 	if (S_ISREG(f1stat.st_mode) == 1) //f1 is REG
 	{
 		//f2 does not exist or is REG
@@ -114,7 +114,7 @@ void cp_1on1(char *f1, char *f2)
 		else //f2 exists and is DIR
 			cp_f2d(f1, f2);
 	}
-	else if (S_ISDIR(f1stat.st_mode) == 1) //f1 is DIR
+	else //f1 is DIR
 	{
 		if (stat(f2, &f2stat) == 0 && //f2 is REG
 			S_ISREG(f2stat.st_mode) == 1)
@@ -126,19 +126,50 @@ void cp_1on1(char *f1, char *f2)
 			cp_d2d(f1, f2);
 	}
 }
-
+	
+//f1 must exist, f2 may or may not exist
+//refer to "cp f1 f2 analysis"
 void cp_f2f(char *f1, char *f2)
 {
 	printf("enter cp_f2f\n");
+	struct stat f1stat, f2stat;
+	stat(f1, &f1stat);
+	
+	if (stat(f2, &f2stat) == 0)
+	{
+		//exit if f1 and f2 are the same file
+		if (f1stat.st_dev == f2stat.st_dev &&
+			f1stat.st_ino == f2stat.st_ino)
+		{
+			printf("cp: '%s' and '%s' are the same file\n", f1, f2);
+			exit(1);
+		}
+		//exit if f1 is LNK and f2 exist
+		if (S_ISLNK(f1stat.st_mode) == 1)
+		{
+			//printf("cp: '%s' and '%s' are the same file\n", f1, f2);
+			exit(1);
+		}
+	}
+	
+	
 }
 
-void cp_f2d(char *f1, char *f2)
+//f1 must exist, d1 may or may not exist
+//refer to "cp f1 f2 analysis"
+void cp_f2d(char *f1, char *d1)
 {
 	printf("enter cp_f2d\n");
+	struct stat f1stat, d1stat;
+	
+	
 }
 
-void cp_d2d(char *f1, char *f2)
+//f1 must exist, d2 may or may not exist
+//refer to "cp f1 f2 analysis"
+void cp_d2d(char *d1, char *d2)
 {
 	printf("enter cp_d2d\n");
+	struct stat d1stat, d2stat;
 }
 
