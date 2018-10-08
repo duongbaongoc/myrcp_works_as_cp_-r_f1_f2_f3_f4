@@ -46,6 +46,7 @@ int check_dir_contain(char *f1, char *d1);
 void cp_f2d(char *f1, char *d1);
 void cp_d2d(char *d1, char *d2);
 void copy_content_d2d(char *d1, char *d2);
+int dir_empty(char *d);
 
 int main(int argc, char *argv[])
 {
@@ -163,7 +164,6 @@ void get_readpaths(char *f1, char *f2)
 //refer to "cp f1 f2 analysis"
 void cp_f2f(char *f1, char *f2)
 {
-	printf("enter cp_f2f\n");
 	chech_same_files(f1, f2);
 	get_readpaths(f1, f2);
 	
@@ -199,6 +199,7 @@ int check_dir_contain(char *f1, char *d1)
 			break;
 		}
 	}
+	closedir(dp);
 	return flag;
 }
 
@@ -206,7 +207,6 @@ int check_dir_contain(char *f1, char *d1)
 //refer to "cp f1 f2 analysis"
 void cp_f2d(char *f1, char *d1)
 {
-	printf("enter cp_f2d\n");
 	int dir_contain = check_dir_contain(f1, d1);
 	char *f2 = strcat(strcat(d1,"/"), basename(f1));
 	struct stat f2stat;
@@ -222,7 +222,6 @@ void cp_f2d(char *f1, char *d1)
 //refer to "cp f1 f2 analysis"
 void cp_d2d(char *d1, char *d2)
 {
-	printf("enter cp_d2d\n");
 	struct stat dstat;
 	char d3[100];
 	char temp[100];
@@ -243,33 +242,38 @@ void cp_d2d(char *d1, char *d2)
 	}
 		
 	//copy content of d1 over to d3
-	copy_content_d2s(d1,d3);
+	copy_content_d2d(d1,d3);
 }
 
 //given d1 and d2 exist, copy content of d1 to d2
 void copy_content_d2d(char *d1, char *d2)
 {
-	printf("inside copy_content_d2s()\n");
+	if (dir_empty(d1) == 1 || //if d1 is empty
+		strcmp(basename(d1),"..") == 0 ||
+		strcmp(basename(d1),".") == 0)
+		return;
+		
 	struct stat dstat;
 	struct dirent *ep;
 	DIR *dp = opendir(d1);
-	char d3[100];
+	char d3[100];//path of each entry of d1
+	char d4[100];//path of each entry of d2
 		
 	while (ep = readdir(dp))
 	{
 		//check type of each entry
-		strcpy(d3,d1);
-		strcat(d3, "/");
-		strcat(d3, ep->d_name);
-		printf("d3=%s\n",d3);
+		strcpy(d3,d1); strcat(d3, "/"); strcat(d3, ep->d_name);
+		strcpy(d4, d2); strcat(d4, "/"); strcat(d4, ep->d_name);
+	
 		stat(d3, &dstat);
 		if (S_ISREG(dstat.st_mode) == 1)
 		{
-			printf("is reg\n");
+			cp_f2f(d3, d4);
 		}
 		else if (S_ISDIR(dstat.st_mode) == 1)
 		{
-			printf("is dir\n");
+			mkdir(d4, ACCESSPERMS);
+			copy_content_d2d(d3, d4);
 		}
 		else
 		{
@@ -277,5 +281,27 @@ void copy_content_d2d(char *d1, char *d2)
 			exit(1);
 		}
 	}
+	closedir(dp);
+}
+
+//check if an existing dir is empty
+//return 1 if dir is empty, return 0 otherwise
+int dir_empty(char *d)
+{
+	int count = 0;
+	struct dirent *ep;
+	DIR *dp = opendir(d);
+	
+	while (ep = readdir(dp))
+	{
+		count++;
+		if (count > 2)
+			break;
+	}
+	
+	if (count <=2)
+		return 1;
+	else
+		return 0;
 }
 
