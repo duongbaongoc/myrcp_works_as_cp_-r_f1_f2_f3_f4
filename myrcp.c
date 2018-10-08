@@ -39,6 +39,8 @@
 void execute_cp(int argc, char *argv[]);
 void validate_files(char *f1, char *f2);
 void cp_1on1(char *f1, char *f2);
+void chech_same_files(char *f1, char *f2);
+void get_readpaths(char *f1, char *f2);
 void cp_f2f(char *f1, char *f2);
 void cp_f2d(char *f1, char *d1);
 void cp_d2d(char *d1, char *d2);
@@ -126,6 +128,35 @@ void cp_1on1(char *f1, char *f2)
 			cp_d2d(f1, f2);
 	}
 }
+
+//exit the program if f1 and f2 are the same file
+void chech_same_files(char *f1, char *f2)
+{
+	struct stat f1stats, f2stats;
+	int r1s = stat(f1, &f1stats);
+	int r2s = stat(f2, &f2stats); 
+	//exit if f1 and f2 are the same
+	if (r2s==0 && f1stats.st_dev==f2stats.st_dev &&
+		f1stats.st_ino==f2stats.st_ino)
+	{
+		printf("cp: '%s' and '%s' are the same file\n", f1, f2);
+		exit(1);
+	}
+}
+
+//if f1 (or f2) is a LNK, change f1 (or f2) to readpath
+void get_readpaths(char *f1, char *f2)
+{
+	struct stat f1stat, f2stat;
+	int r1 = lstat(f1, &f1stat);
+	int r2 = lstat(f2, &f2stat); 
+	char path1[PATH_MAX+1], path2[PATH_MAX+1];
+	//get real paths of all symbolic links
+	if (S_ISLNK(f1stat.st_mode) == 1)
+		f1 = realpath(f1, path1);
+	if (r2 == 0 && S_ISLNK(f2stat.st_mode) == 1)
+		f2 = realpath(f2, path2);
+}
 	
 //f1 must exist and is REG/LNK_to_REG
 //f2 may not exist and if exists, it is REG/LNK_to_REG
@@ -134,16 +165,8 @@ void cp_1on1(char *f1, char *f2)
 void cp_f2f(char *f1, char *f2)
 {
 	printf("enter cp_f2f\n");
-	struct stat f1stat, f2stat;
-	int r1 = lstat(f1, &f1stat);
-	int r2 = lstat(f2, &f2stat);
-	char path1[PATH_MAX+1], path2[PATH_MAX+1];
-	
-	//get real paths of all symbolic links
-	if (S_ISLNK(f1stat.st_mode) == 1)
-		f1 = realpath(f1, path1);
-	if (r2 == 0 && S_ISLNK(f2stat.st_mode) == 1)
-		f2 = realpath(f2, path2);
+	chech_same_files(f1, f2);
+	get_readpaths(f1, f2);
 	
 	//open files
 	int f1d = open(f1, O_RDONLY);
@@ -159,6 +182,8 @@ void cp_f2f(char *f1, char *f2)
 	close(f1d);
 	close(f2d);
 }
+
+
 
 //f1 must exist, d1 may or may not exist
 //refer to "cp f1 f2 analysis"
