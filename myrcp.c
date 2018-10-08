@@ -127,32 +127,37 @@ void cp_1on1(char *f1, char *f2)
 	}
 }
 	
-//f1 must exist, f2 may or may not exist
+//f1 must exist and is REG/LNK_to_REG
+//f2 may not exist and if exists, it is REG/LNK_to_REG
+//copy f1 to f2
 //refer to "cp f1 f2 analysis"
 void cp_f2f(char *f1, char *f2)
 {
 	printf("enter cp_f2f\n");
 	struct stat f1stat, f2stat;
-	stat(f1, &f1stat);
+	int r1 = lstat(f1, &f1stat);
+	int r2 = lstat(f2, &f2stat);
+	char path1[PATH_MAX+1], path2[PATH_MAX+1];
 	
-	if (stat(f2, &f2stat) == 0)
-	{
-		//exit if f1 and f2 are the same file
-		if (f1stat.st_dev == f2stat.st_dev &&
-			f1stat.st_ino == f2stat.st_ino)
-		{
-			printf("cp: '%s' and '%s' are the same file\n", f1, f2);
-			exit(1);
-		}
-		//exit if f1 is LNK and f2 exist
-		if (S_ISLNK(f1stat.st_mode) == 1)
-		{
-			//printf("cp: '%s' and '%s' are the same file\n", f1, f2);
-			exit(1);
-		}
-	}
+	//get real paths of all symbolic links
+	if (S_ISLNK(f1stat.st_mode) == 1)
+		f1 = realpath(f1, path1);
+	if (r2 == 0 && S_ISLNK(f2stat.st_mode) == 1)
+		f2 = realpath(f2, path2);
 	
+	//open files
+	int f1d = open(f1, O_RDONLY);
+	int f2d = open(f2, O_WRONLY|O_TRUNC|O_CREAT, 0644);
 	
+	//copy f1 to f2
+	int n, m;
+	char buf[4096];
+	while (n = read(f1d, buf, 4096))
+		m = write(f2d, buf, n);
+		
+	//close files
+	close(f1d);
+	close(f2d);
 }
 
 //f1 must exist, d1 may or may not exist
