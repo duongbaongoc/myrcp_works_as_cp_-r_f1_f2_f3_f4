@@ -42,6 +42,7 @@ void cp_1on1(char *f1, char *f2);
 void chech_same_files(char *f1, char *f2);
 void get_readpaths(char *f1, char *f2);
 void cp_f2f(char *f1, char *f2);
+int check_dir_contain(char *f1, char *d1);
 void cp_f2d(char *f1, char *d1);
 void cp_d2d(char *d1, char *d2);
 
@@ -183,16 +184,40 @@ void cp_f2f(char *f1, char *f2)
 	close(f2d);
 }
 
-
+//check if a directory contains a given file/directory
+//return 1 it does, return 0 otherwise
+int check_dir_contain(char *f1, char *d1)
+{
+	int flag = 0;
+	char *f1_basename = basename(f1);
+	struct dirent *ep;
+	DIR *dp = opendir(d1);
+	
+	while (ep = readdir(dp))
+	{
+		if (strcmp(f1_basename, ep->d_name) == 0)
+		{
+			flag = 1;
+			break;
+		}
+	}
+	return flag;
+}
 
 //f1 must exist, d1 may or may not exist
 //refer to "cp f1 f2 analysis"
 void cp_f2d(char *f1, char *d1)
 {
 	printf("enter cp_f2d\n");
-	struct stat f1stat, d1stat;
+	int dir_contain = check_dir_contain(f1, d1);
+	char *f2 = strcat(strcat(d1,"/"), basename(f1));
+	struct stat f2stat;
+	int r2 = stat(f2, &f2stat); 
 	
-	
+	if (dir_contain == 0 | S_ISREG(f2stat.st_mode))
+		cp_f2f(f1, f2);
+	else //d2 contains a dir named basename(f1)
+		cp_f2d(f1, f2);	
 }
 
 //f1 must exist, d2 may or may not exist
