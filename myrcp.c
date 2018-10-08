@@ -45,7 +45,7 @@ void cp_f2f(char *f1, char *f2);
 int check_dir_contain(char *f1, char *d1);
 void cp_f2d(char *f1, char *d1);
 void cp_d2d(char *d1, char *d2);
-
+void copy_content_d2d(char *d1, char *d2);
 
 int main(int argc, char *argv[])
 {
@@ -105,9 +105,7 @@ void cp_1on1(char *f1, char *f2)
 	validate_files(f1, f2);
 	struct stat f1stat, f2stat;
 	stat(f1, &f1stat);
-	printf("%d\n",S_ISREG(f1stat.st_mode));//test
-	printf("%d\n",S_ISLNK(f1stat.st_mode));//test
-	printf("%d\n",S_ISDIR(f1stat.st_mode));//test
+	
 	if (S_ISREG(f1stat.st_mode) == 1) //f1 is REG
 	{
 		//f2 does not exist or is REG
@@ -225,6 +223,59 @@ void cp_f2d(char *f1, char *d1)
 void cp_d2d(char *d1, char *d2)
 {
 	printf("enter cp_d2d\n");
-	struct stat d1stat, d2stat;
+	struct stat dstat;
+	char d3[100];
+	char temp[100];
+	strcpy(temp, d2);
+	
+	//if d2 does not exist, make d2
+	if (stat(d2, &dstat) < 0) 
+	{
+		mkdir(d2, ACCESSPERMS);
+		strcpy(d3, d2);
+	}
+	else
+	{
+		strcpy(d3, strcat(strcat(temp,"/"), basename(d1)));
+		//if d2 does not contain file named basename(d1), make one
+		if (check_dir_contain(d1, d2) == 0)
+			mkdir(d3, ACCESSPERMS);
+	}
+		
+	//copy content of d1 over to d3
+	copy_content_d2s(d1,d3);
+}
+
+//given d1 and d2 exist, copy content of d1 to d2
+void copy_content_d2d(char *d1, char *d2)
+{
+	printf("inside copy_content_d2s()\n");
+	struct stat dstat;
+	struct dirent *ep;
+	DIR *dp = opendir(d1);
+	char d3[100];
+		
+	while (ep = readdir(dp))
+	{
+		//check type of each entry
+		strcpy(d3,d1);
+		strcat(d3, "/");
+		strcat(d3, ep->d_name);
+		printf("d3=%s\n",d3);
+		stat(d3, &dstat);
+		if (S_ISREG(dstat.st_mode) == 1)
+		{
+			printf("is reg\n");
+		}
+		else if (S_ISDIR(dstat.st_mode) == 1)
+		{
+			printf("is dir\n");
+		}
+		else
+		{
+			printf("cp: cannot copy special files\n");
+			exit(1);
+		}
+	}
 }
 
